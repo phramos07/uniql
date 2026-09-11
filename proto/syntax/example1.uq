@@ -1,0 +1,45 @@
+RULE ms_to_sec {
+    RETURN x * 0.001
+}
+
+RULE flow_duration {
+    CASE x < 100: "Immediate"
+    CASE x < 1000: "Small"
+    CASE x < 10000: "Medium"
+}
+
+RULE port_classifier {
+    CASE x IN [0, 1023]: "Known ports"
+    CASE x IN [1024, 51000]: "Registered apps"
+    DEFAULT: "Dynamic"
+}
+
+RULE fill_zeroes {
+    IF x == 0: "Unknown"
+}
+
+IMPORT "dataset1.csv" AS d1
+IMPORT "dataset2.csv" AS d2
+IMPORT "dataset3.csv" AS d3
+
+-- default:
+CONFIG {
+    DROP_UNMAPPED: TRUE -- dropa todas as colunas que não forem mapeadas
+    SNAKE_CASE: TRUE -- transforma para snake_case os titulos das colunas por default
+    -- DEBUG: TRUE -- printa no terminal enquanto as operacoes sao realizadas
+}
+
+SCHEMA Unified { -- é "unified" por default
+    MAP d1.flow_duration -> unified.Duration USING RULE ms_to_sec
+    MAP d2.flow_duration -> unified.Duration 
+
+    MASK d1.dest_port -> unified.DestPortCategory USING RULE port_classifier
+
+    FILL d2.pkt_count WITH 0
+
+    DROP d1.fwd_pkts_per_b_avg
+
+    MAP d3.flow_duration -> unified.Risk USING RULE ms_to_sec
+        & MASK USING RULES (flow_duration, fill_zeroes)
+        & FILL_NULL with "Unknown"
+}
