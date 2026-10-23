@@ -16,11 +16,11 @@ A linguagem não deve “adivinhar” silenciosamente a semântica dos dados. A
 automação proposta é dividida em dois níveis:
 
 1. **Automação mecânica segura:** operações que podem ser executadas
-   deterministicamente, como `trim`, `snake_case`, detecção de duplicatas,
+  deterministicamente, como `trim`, `snake_case`, detecção de duplicatas,
    inferência inicial de tipos, mapeamento por nome exatamente igual após
    normalização e alinhamento à ordem do schema.
 2. **Harmonização declarada pelo pesquisador:** equivalências semânticas,
-   unidades, labels, sentinelas, derivações e políticas de missing devem ser
+  unidades, labels, sentinelas, derivações e políticas de missing devem ser
    explicitamente descritas quando não forem mecanicamente inequívocas.
 
 Mapeamento semântico por similaridade, embeddings ou LLM pode ser uma extensão
@@ -28,7 +28,11 @@ futura de **sugestão**, mas não deve ser requisito mínimo do núcleo.
 
 ---
 
+
+
 ## 2. Princípios de projeto
+
+
 
 ### 2.1 Python-like, mas com chaves
 
@@ -81,6 +85,8 @@ de Machine Learning. O UniQL não deve confundir “representar corretamente” 
 
 ---
 
+
+
 ## 3. Pipeline manual que a linguagem deve automatizar
 
 A pergunta central das anotações é: **“se fosse na unha, o que eu faria?”**
@@ -114,7 +120,11 @@ O pipeline manual típico é:
 
 ---
 
+
+
 ## 4. Requisitos funcionais
+
+
 
 ### RF-01 — Importar CSV com dialeto explícito — P0
 
@@ -138,6 +148,8 @@ source data = csv("input/*.csv") {
     header = True
 }
 ```
+
+
 
 ### RF-02 — Importar vários arquivos como uma fonte lógica — P0
 
@@ -194,6 +206,8 @@ O schema define:
 - papel `required`, `optional` ou `target`;
 - ordem final.
 
+
+
 ### RF-07 — Sistema de tipos — P0
 
 Tipos escalares mínimos:
@@ -219,6 +233,8 @@ Tipos/unidades semânticos úteis:
 ```uniql
 flow_pkt_rate: rate[packets_per_second]?
 ```
+
+
 
 ### RF-08 — Inferir e converter tipos — P0
 
@@ -247,6 +263,8 @@ A conversão deve ser conhecida pela runtime ou por `rule` explícita.
 drop timestamp
 drop src_ip
 ```
+
+
 
 ### RF-11 — Dropar colunas não mapeadas — P0
 
@@ -286,6 +304,8 @@ A linguagem precisa:
 - permitir regras condicionais com `has_column`;
 - produzir relatório das diferenças;
 - convergir todas as variantes para o mesmo schema.
+
+
 
 ### RF-14 — Filtrar/remover linhas inválidas — P0
 
@@ -340,7 +360,7 @@ Requisito direto das anotações.
 derive total_pkt_count = fwd_pkt_count + bwd_pkt_count
 ```
 
-A runtime deve montar dependências entre atributos derivados.
+A runtime deve montar dependências entre atributos derivados. Colunas derivadas estão no dataset final.
 
 ### RF-19 — Suportar funções/regras reutilizáveis — P0
 
@@ -351,6 +371,43 @@ rule safe_div(a, b) {
     }
     return a / b
 }
+
+rule nstoms {
+    return value*1000 ||
+    value = value*1000
+}
+
+rule div(f) {
+    if f == 0 { erro }
+    value = value/f || return value/f
+}
+
+rule concat(cols...) { //numero variavel de args na regra
+    for c in cols:
+       value += c
+}
+
+rule binaria(x, y) {
+    value = x + y
+}
+
+rule normalize {
+
+}
+
+// se col1 existe em um dataset original:
+// derive col1 deve falhar : col1 ja existe no original
+
+// se col1 foi derivada
+// map col1->... deve falhar: col1 é coluna derivada e nao pode ser mapeada
+
+derive col1 using binaria(col2, col3)
+derive colT using concat(col3, col4, col5)
+map col1->col2 using div(5) // nao pode mapear coluna derivada
+map col1->col2 using nstoms
+
+derive => tem que ser binário (só pode receber duas colunas)
+
 ```
 
 As regras permitem encapsular conversões, categorização e normalização.
@@ -367,15 +424,23 @@ Também deve existir formatação controlada no `export`.
 
 ```uniql
 map_values label using normalize_binary_label
+
+podemos usar uma regra normalize:
+rule normalize_label(label){
+    if value == LABEL 
+    return label
+}
 ```
 
-O `label` é `target`, nunca feature preditiva.
+O `label` é `target`, nunca feature preditiva. <= somente em uso para treinamento de modelos de ML
 
 ### RF-22 — Validar presença de colunas — P0
 
 ```uniql
-require [flow_duration, fwd_pkt_count, label]
+require flow_duration, fwd_pkt_count, label
 ```
+
+
 
 ### RF-23 — Validar invariantes — P0
 
@@ -403,7 +468,9 @@ Ao concatenar, deve ser possível registrar a fonte:
 preserve_source = True as "_source_dataset"
 ```
 
-Essa coluna pode ser metadado de auditoria e ser excluída do ML.
+~~Essa coluna pode ser metadado de auditoria e ser excluída do ML.~~
+
+Essas informações podem estar em um log/relatorio.
 
 ### RF-26 — Formatar e exportar saída — P0
 
@@ -412,10 +479,12 @@ Configurações mínimas:
 - CSV;
 - separador;
 - encoding;
-- símbolo de null;
-- decimal;
-- formato de data/hora;
-- ordem de colunas.
+- ~~símbolo de null;~~
+- ~~decimal;~~
+- ~~formato de data/hora;~~
+- ~~ordem de colunas.~~
+
+
 
 ### RF-27 — Produzir relatório de auditoria — P0
 
@@ -442,23 +511,23 @@ Esse requisito é central para reprodutibilidade científica.
 Casos:
 
 - duas colunas de origem para um mesmo target;
-- duplicata depois de `snake_case`;
-- um auto-map contradiz um map explícito.
+- duplicata depois de `snake_case`; <= numerar col_repetida_1 col_repetida_2
+- um auto-map contradiz um map explícito. <= automap nao vai funcionar por que col_repetida_1 e col_repetida_2 nao vao existir no automap
 
-Modo recomendado no TCC:
+~~Modo recomendado no TCC:~~
 
 ```uniql
 on_mapping_conflict = "error"
 ```
 
-Nunca “escolher uma” silenciosamente.
+~~Nunca “escolher uma” silenciosamente.~~
 
 ### RF-29 — Preview / dry-run — P1
 
-Antes de processar 5 GB:
+Antes de processar 5 GB: => Pode ser uma otimização do runtime. O proprio runtime executa primeiro o script inteiro para 100 , e se nao houver erros, executa pro resto.
 
 ```uniql
-preview transform lycos18 rows 100
+preview 100
 ```
 
 ou modo de CLI equivalente.
@@ -475,12 +544,24 @@ Operação útil para o fluxo de pesquisa:
 - min/max;
 - cardinalidade.
 
-Pode ser built-in da ferramenta, sem necessariamente fazer parte da gramática
-do programa.
+Pode ser built-in da ferramenta, sem necessariamente fazer parte da gramática do programa. => por enquanto se profiling
+
+RF31 - Exportar os dados
+
+```
+// opcao de exportar unificado
+// opcao de exportar separado (por entrada)
+```
 
 ---
 
+
+
+
+
 ## 5. Requisitos não funcionais
+
+
 
 ### RNF-01 — Determinismo e reprodutibilidade
 
@@ -512,6 +593,8 @@ Erros devem informar:
 - valor problemático;
 - ação sugerida.
 
+
+
 ### RNF-06 — Auditabilidade
 
 Toda transformação deve poder ser reconstruída a partir do programa e do
@@ -534,7 +617,11 @@ samples.
 
 ---
 
+
+
 ## 6. Modelo conceitual da linguagem
+
+
 
 ### `config`
 
@@ -574,33 +661,39 @@ Geração de proveniência/auditoria.
 
 ---
 
+
+
 ## 7. Primitivas / operações propostas
 
-| Operação | Função |
-|---|---|
-| `automap` | mapeia nomes exatamente iguais após normalização |
-| `map` | liga explicitamente uma coluna fonte a uma coluna canônica |
-| `drop` | remove coluna |
-| `deduplicate columns` | resolve duplicatas estruturais |
-| `drop_rows` | remove registros por condição |
-| `cast` | converte tipo |
-| `convert` | converte unidade |
-| `parse` | interpreta string como data/tempo/tipo semântico |
-| `replace` | substitui valores/sentinelas |
-| `fill` | preenche missing por política |
-| `derive` | cria atributo calculado |
-| `map_values` | harmoniza categorias/labels |
-| `require` | exige presença/não ausência estrutural |
-| `assert` | valida uma condição/invariante |
-| `concat_rows` | concatena datasets já harmonizados |
-| `validate` | valida o resultado contra o schema |
-| `export` | grava saída |
-| `report` | grava auditoria |
 
-### Sobre `MASK`
+| Operação              | Função                                                     |
+| --------------------- | ---------------------------------------------------------- |
+| `automap`             | mapeia nomes exatamente iguais após normalização           |
+| `map`                 | liga explicitamente uma coluna fonte a uma coluna canônica |
+| `drop`                | remove coluna                                              |
+| `deduplicate columns` | resolve duplicatas estruturais                             |
+| `drop_rows`           | remove registros por condição                              |
+| `cast`                | converte tipo                                              |
+| `convert`             | converte unidade                                           |
+| `parse`               | interpreta string como data/tempo/tipo semântico           |
+| `replace`             | substitui valores/sentinelas                               |
+| `fill`                | preenche missing por política                              |
+| `derive`              | cria atributo calculado                                    |
+| `map_values`          | harmoniza categorias/labels                                |
+| `require`             | exige presença/não ausência estrutural                     |
+| `assert`              | valida uma condição/invariante                             |
+| `concat_rows`         | concatena datasets já harmonizados                         |
+| `validate`            | valida o resultado contra o schema                         |
+| `export`              | grava saída                                                |
+| `report`              | grava auditoria                                            |
+
+
+
+
+### Sobre `MASK => podemos dropar por enquanto`
 
 O protótipo `example1.uq` usa `MASK` para categorizar uma porta. Recomenda-se
-**não estabilizar `MASK` com esse significado**.
+**não estabilizar** `MASK` **com esse significado**.
 
 “Masking” normalmente sugere anonimização/ocultação. Para transformação
 semântica, `map`, `derive` ou uma `rule` são mais claros.
@@ -621,7 +714,11 @@ existir um caso de uso concreto.
 
 ---
 
+
+
 ## 8. Sistema de tipos e unidades
+
+
 
 ### Tipos escalares
 
@@ -636,6 +733,8 @@ time
 datetime
 ```
 
+
+
 ### Tipos físicos/semânticos
 
 ```text
@@ -647,12 +746,16 @@ rate[bytes_per_second]
 rate[packets_per_second]
 ```
 
+
+
 ### Nullable
 
 ```text
 float?
 datetime?
 ```
+
+
 
 ### Papéis de atributo
 
@@ -672,6 +775,8 @@ identifier
 para separar rastreabilidade de features preditivas.
 
 ---
+
+
 
 ## 9. Regras para automap
 
@@ -707,10 +812,12 @@ Logo, precisa de:
 map tot_fwd_pkts -> fwd_pkt_count
 ```
 
-Esse limite é deliberado. O UniQL não deve trocar auditabilidade por
-“inteligência” heurística nesta primeira versão.
+Esse limite é deliberado. **O UniQL não deve trocar auditabilidade por
+“inteligência” heurística nesta primeira versão.**
 
 ---
+
+
 
 ## 10. Ordem lógica de execução
 
@@ -733,6 +840,8 @@ pode organizar as operações em fases:
 Dentro de `rule`, a ordem é imperativa como em Python.
 
 ---
+
+
 
 ## 11. Palavras-chave provisórias
 
@@ -787,6 +896,8 @@ Esta lista **não é ainda uma gramática**.
 
 ---
 
+
+
 ## 12. O que fica fora do escopo mínimo v0.1
 
 1. Treinar Random Forest/XGBoost/MLP dentro da DSL.
@@ -802,6 +913,8 @@ Esses itens podem ser extensões futuras.
 
 ---
 
+
+
 ## 13. Questões ainda abertas para discutir com o orientador
 
 1. Extensão definitiva: `.uq` ou `.uniql`?
@@ -816,9 +929,11 @@ Esses itens podem ser extensões futuras.
 10. Como versionar schemas (`nids_core@1`)?
 11. A linguagem terá bibliotecas padrão de unidades e funções de rede?
 12. Qual será a política para transforms que não produzem todos os campos
-    `required`?
+  `required`?
 
 ---
+
+
 
 ## 14. Traceabilidade com a reunião
 
@@ -839,6 +954,8 @@ Todos esses pontos estão cobertos pelos requisitos RF-01 a RF-30 deste
 documento.
 
 ---
+
+
 
 ## 15. Recomendação de próximos artefatos
 
