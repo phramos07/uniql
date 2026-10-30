@@ -1,5 +1,5 @@
 # UniQL — protótipo mínimo revisado (.q)
-# NÃO executável. A sintaxe ainda precisa ser aprovada com o orientador.
+# NÃO executável. A sintaxe ainda precisa ser validada
 # Só demonstra operações dos requisitos funcionais v0.2.
 
 config {

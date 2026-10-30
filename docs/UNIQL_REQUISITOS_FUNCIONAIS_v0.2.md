@@ -209,11 +209,10 @@ Também ficam fora do núcleo: `MASK`, `REDUCE`, `validate`, tipos semânticos, 
 
 ## 4. Pontos realmente abertos
 
-1. **`fill` depois de `map`:** há anotações que o consideram necessário, mas outras pedem remover RF-16/RF-17 e realizar as alterações somente durante o mapeamento. **Proposta nesta v0.2:** não criar um RF nem um comando `fill` até Pedro decidir se há caso que o `map ... using rule` não resolve.
-2. **Duplicatas:** aparece a possibilidade de manter a primeira, concatenar colunas ou numerá-las com avisos. A edição no GitHub cita sufixos; por isso esta proposta mantém a identificação distinta + warning, **sem escolher/concatenar automaticamente os valores**.
+1. **`fill` depois de `map`:** há anotações que o consideram necessário, mas outras pedem remover RF-16/RF-17 e realizar as alterações somente durante o mapeamento. **Proposta nesta v0.2:** não criar um RF nem um comando `fill` até decidirmos.
+2. **Duplicatas:** aparece a possibilidade de manter a primeira, concatenar colunas ou numerá-las com avisos.
 3. **`rule` e parâmetros:** a regra de `map` recebe somente `value` implícito; a de `create` recebe dois campos. Ainda é preciso decidir a sintaxe definitiva, inclusive se funções auxiliares com parâmetros constantes serão aceitas.
-4. **Saída da `rule`:** `return` ou atribuição a `value`? O exemplo usa `return` apenas como opção provisória.
-5. **Conflitos de mapeamento:** as anotações pedem avisos, mas também proíbem sobrescrita. É preciso decidir se o processamento para ou apenas ignora o segundo mapeamento em conflito; **em nenhuma hipótese deve sobrescrever silenciosamente**.
+4. **Saída da `rule`:** `return` ou será atribuição a `value`? O exemplo usa `return` apenas como opção provisória.
+5. **Conflitos de mapeamento:**  Vai dar avisos, mas falamos que não terá sobrescrita. Precisamos decidir se o processamento para ou apenas ignora o segundo mapeamento em conflito; **em nenhuma hipótese deve sobrescrever silenciosamente**.
 6. **Obrigatoriedade:** `required` indica coluna obrigatória, mas ainda falta fechar a política quando a fonte não tem como produzi-la; não introduzir `assert` ou `require` separado antes disso.
-7. **Prévia:** as anotações falam em primeiros 100 registros; isso detecta problemas iniciais, mas não garante ausência de problemas nas demais linhas.
-8. **Semântica exata de `snake_case`:** formalizar como resolver espaços, pontuação e colisões sem oferecer uma primitiva `trim` genérica.
+7. **Semântica exata de `snake_case`:** formalizar como resolver espaços, pontuação e colisões sem oferecer uma primitiva `trim` genérica.
